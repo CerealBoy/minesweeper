@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Minesweeper</title>
+    <link rel="stylesheet" href="http://blog.cerealboy.com/i/css/bootstrap-min.css">
+    <style>
+canvas { }
+#img-cont { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid">
+    <div class="post-content">
+        <div class="jumbotron subhead">
+            <h1>Minesweeper</h1>
+            <blockquote>
+                <p>Minesweeper is back!</p>
+                <small>CerealBoy</small>
+            </blockquote>
+        </div>
+
+        <div class="row-fluid">
+            <div class="span3">
+                <div class="hero-unit">
+                    <p>Reset here! <small id="current-difficulty"></small></p>
+                    <p>
+                        <a href="#restart" id="restart" class="btn btn-danger">Restart</a>
+                        <button class="btn btn-success disabled" id="timer">00:00:00.000</button>
+                        <div class="btn-group">
+                            <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">Difficulty <span class="caret"></span></a>
+                            <ul class="dropdown-menu" id="diff-set">
+                                <li><a href="#easy" id="easy">Easy</a></li>
+                                <li><a href="#medium" id="medium">Medium</a></li>
+                                <li><a href="#hard" id="hard">Hard</a></li>
+                            </ul>
+                        </div>
+                    </p>
+                </div>
+            </div>
+
+            <div class="span9">
+                <canvas id="mines" width="450" height="240"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="img-cont">
+    <img id="img-begin" src="mine_closed.png">
+    <img id="img-0" src="mine_empty.png">
+    <img id="img-1" src="mine_one.gif">
+    <img id="img-2" src="mine_two.gif">
+    <img id="img-3" src="mine_three.gif">
+    <img id="img-4" src="mine_four.gif">
+    <img id="img-5" src="mine_five.gif">
+    <img id="img-6" src="mine_six.gif">
+    <img id="img-7" src="mine_seven.gif">
+    <img id="img-8" src="mine_eight.gif">
+    <img id="img-bomb" src="mine_mine.gif">
+    <img id="img-flag" src="mine_flag.gif">
+    <img id="img-tick" src="mine_tick.gif">
+</div>
+
+    <script type="text/javascript" src="http://blog.cerealboy.com/i/js/jquery-1.7.1.min.js"></script>
+    <script type="text/javascript" src="http://blog.cerealboy.com/i/js/bootstrap-alert.js"></script>
+    <script type="text/javascript" src="http://blog.cerealboy.com/i/js/bootstrap-dropdown.js"></script>
+    <script type="text/javascript" src="http://blog.cerealboy.com/i/js/bootstrap-modal.js"></script>
+    <script>
+
+var a;
+
+function m(eyed) {
+    var id = eyed;
+    var difficulty = 0;
+    var canvasElem = document.getElementById(id);
+    var ctx = canvasElem.getContext('2d');
+    var restart = $('#restart');
+    var curr_diff = $('#current-difficulty');
+
+    var beginning = 0;
+    var ending = 0;
+    var interval = null;
+
+    var dimension = 20;
+    var d = [ {"x": 30, "y": 16, "m": 99, "n": "Hard"}, {"x": 16, "y": 16, "m": 40, "n": "Medium"}, {"x": 8, "y": 8, "m": 10, "n": "Easy"} ];
+    var b = null;
+    var spacesRemaining = 1000;
+    var dead = false;
+
+    var n = function n(na, nb, value_of_mine) {
+        var x = na, y = nb, v = 0, z = value_of_mine, img = null, flag = false;
+
+        this.flip = function() {
+            if (v || flag) return;
+            v = 1;
+
+            a.squareFlipped();
+
+            if (z === 0) {
+                a.cascadeOpen(x, y);
+            } else if (z === '*') {
+                a.flailMine(x, y);
+            }
+        }
+        this.flag = function() {
+            if (v) {
+                if (!a.flagged(x, y, z))
+                    return;
+
+                return a.cascadeOpen(x, y);
+            }
+
+            if (flag)
+                flag = false;
+            else
+                flag = true;
+        }
+        this.place = function(x, y) {
+            x = x;
+            y = y;
+        }
+        this.draw = function() {
+            if (!v) {
+                if (flag)
+                    ctx.drawImage(document.getElementById('img-flag'), (x * dimension + 5), (y * dimension + 5));
+                else
+                    ctx.drawImage(document.getElementById('img-begin'), (x * dimension + 5), (y * dimension + 5));
+            } else {
+                var img_id = '';
+                switch (z) {
+                    case 0:
+                    case 1:
+                    case 2:
+                    case 3:
+                    case 4:
+                    case 5:
+                    case 6:
+                    case 7:
+                    case 8:
+                        img_id = 'img-'+z;
+                        break;
+                    case '*':
+                        img_id = 'img-bomb';
+                        break;
+                    case 't':
+                    default:
+                        img_id = 'img-flag';
+                        break;
+                }
+                if (img_id.length > 0) ctx.drawImage(document.getElementById(img_id), (x * dimension + 5), (y * dimension + 5));
+            }
+        }
+        this.isMine = function() {
+            return (z === '*') ? true : false;
+        }
+        this.set = function(se) {
+            z = se;
+        }
+        this.isFlagged = function() {
+            return flag;
+        }
+    }
+
+    this.squareFlipped = function() {
+        spacesRemaining--;
+
+        if (spacesRemaining === 0) {
+            stop();
+            dead = true;
+        }
+    }
+    this.cascadeOpen = function(cx, cy) {
+        // open spot, now cascade it
+        for (var ax = cx - 1; ax <= cx + 1; ax++) {
+            for (var ay = cy - 1; ay <= cy + 1; ay++) {
+                if (ax === cx && ay === cy) continue;
+                if (b[ax] === undefined || b[ax][ay] === undefined) continue;
+                b[ax][ay].flip();
+            }
+        }
+    }
+    this.flailMine = function(cx, cy) {
+        // got mine, fail out
+        for (var ax = 0; ax < d[difficulty]["x"]; ax++) {
+            for (var ay = 0; ay < d[difficulty]["y"]; ay++) {
+                b[ax][ay].flip();
+            }
+        }
+
+        stop();
+        dead = true;
+    }
+    this.flagged = function(cx, cy, cz) {
+        if (cz === '*' || cz === 0) return false;
+        var mine_count = 0;
+
+        for (var ax = cx - 1; ax <= cx + 1; ax++) {
+            for (var ay = cy - 1; ay <= cy + 1; ay++) {
+                if (b[ax] !== undefined && b[ax][ay] !== undefined && (ax !== cx || ay !== cy)) { if (b[ax][ay].isFlagged()) mine_count++; }
+            }
+        }
+
+        if (mine_count === cz)
+            return true;
+        return false;
+    }
+    function runBoard() {
+        var ri = 0, rj = 0, rx = 0, ry = 0, mx = d[difficulty]["x"], my = d[difficulty]["y"], count = d[difficulty]["m"];
+        b = Array();
+
+        for (ri = 0; ri < count; ri++) {
+            do {
+                rx = Math.floor((Math.random()*mx)+1) - 1;
+                ry = Math.floor((Math.random()*my)+1) - 1;
+
+                if (b[rx] === null || b[rx] === undefined)
+                    b[rx] = Array();
+                if (b[rx][ry] === null || b[rx][ry] === undefined) {
+                    b[rx][ry] = new n(rx, ry, '*');
+
+                    break;
+                }
+            } while (true);
+        }
+
+        for (ri = 0; ri < mx; ri++) {
+            for (rj = 0; rj < my; rj++) {
+                if (b[ri] === undefined) {
+                    if (ri <= mx) // row undefined
+                        return a.reset();
+                    continue;
+                }
+
+                if (b[ri][rj] === undefined) {
+                    b[ri][rj] = new n(ri, rj, 0);
+                }
+            }
+        }
+
+        for (ri = 0; ri < mx; ri++) {
+            for (rj = 0; rj < my; rj++) {
+                if (!b[ri][rj].isMine())
+                    b[ri][rj].set(findMines(ri, rj));
+            }
+        }
+
+        spacesRemaining = (mx * my - count);
+    }
+    function findMines(x, y) {
+        var count = 0, rb = y - 1;
+
+        for (var ra = x - 1; ra <= (x + 1); ra++) {
+            for (var rb = y - 1; rb <= (y + 1); rb++) {
+                if ((ra === -1 || rb === -1) || (ra >= d[difficulty]['x'] || rb >= d[difficulty]['y']) || (ra === x && rb === y)) continue;
+
+                if (b[ra][rb].isMine()) count++;
+            }
+        }
+        return count;
+    }
+    this.setDifficulty = function(diff) {
+        if (diff === "easy") difficulty = 2;
+        else if (diff === "medium") difficulty = 1;
+        else difficulty = 0;
+
+        this.reset();
+        display();
+    }
+    function stop() {
+        if (interval !== null && interval !== undefined)
+            clearInterval(interval);
+
+        if (beginning > 0) {
+            ending = (new Date()).getTime();
+            var ab = { "begin": beginning, "end": ending };
+
+            beginning = 0;
+            ending = 0;
+
+            return ab;
+        }
+    }
+    this.reset = function() {
+        stop();
+        runBoard();
+
+        dead = false;
+        display();
+    }
+    this.begin = function() {
+        this.reset();
+    }
+    this.clickSquare = function(e) {
+        if (dead) return;
+
+        var x_pos = e.clientX - e.currentTarget.offsetLeft, y_pos = e.clientY - e.currentTarget.offsetTop;
+        var rx = Math.floor((x_pos - 5) / dimension), ry = Math.floor((y_pos - 5) / dimension);
+
+        if (beginning < 1) {
+            beginning = (new Date()).getTime();
+            startTimer();
+        }
+
+        if (e.which === 3) {
+            b[rx][ry].flag();
+        } else {
+            b[rx][ry].flip();
+        }
+
+        display();
+    }
+    this.updateTime = function() {
+        var fullTime = (new Date()).getTime() - beginning;
+
+        var milliseconds = (fullTime % 1000);
+        if (milliseconds < 10)
+            milliseconds = '00'+""+milliseconds;
+        else if (milliseconds < 100)
+            milliseconds = '0'+""+milliseconds;
+        fullTime = Math.floor(fullTime / 1000);
+
+        var seconds = (fullTime % 60);
+        if (seconds < 10)
+            seconds = '0'+""+seconds;
+        fullTime = Math.floor(fullTime / 60);
+
+        var minutes = (fullTime % 60);
+        if (minutes < 10) minutes = '0'+""+minutes;
+        fullTime = Math.floor(fullTime / 60);
+
+        var str = fullTime+":"+minutes+":"+seconds+":"+milliseconds;
+        $('#timer').html(str);
+    }
+    function startTimer() {
+        interval = setInterval("a.updateTime()", 50);
+    }
+    function display() {
+        var v_x = d[difficulty]["x"], v_y = d[difficulty]["y"], v_n = d[difficulty]["n"], rx = 0, ry = 0;
+        canvasElem.width = (v_x * dimension) + 10;
+        canvasElem.height = (v_y * dimension) + 10;
+        curr_diff.html(v_n);
+
+        displayBorder(ctx, canvasElem, v_x, v_y, dimension);
+
+        ctx.fillStyle = '#8e8e8e';
+        ctx.fillRect(5, 5, v_x * dimension, v_y * dimension);
+
+        for (rx = 0; rx < v_x; rx++) {
+            for (ry = 0; ry < v_y; ry++) {
+                if (b[rx] === undefined)
+                    return a.reset();
+
+                b[rx][ry].draw();
+            }
+        }
+    }
+    function displayBorder(c, w, x, y, rd) {
+        var l = c.createRadialGradient(5, 5, 0, 0, 0, 5);
+        l.addColorStop(0, '#aeaeae'); l.addColorStop(1, '#dfdfdf');
+        c.fillStyle = l; c.beginPath();
+        c.arc(5, 5, 5, 0, (Math.PI * 2), true); c.fill();
+
+        l = c.createRadialGradient(x * rd + 5, 5, 0, x * rd + 10, 0, 5);
+        l.addColorStop(0, '#aeaeae'); l.addColorStop(1, '#dfdfdf');
+        c.fillStyle = l; c.beginPath();
+        c.arc(x * rd + 5, 5, 5, 0, (Math.PI * 2), false); c.fill();
+
+        l = c.createRadialGradient(5, y * rd + 5, 0, 0, y * rd + 10, 5);
+        l.addColorStop(0, '#aeaeae'); l.addColorStop(1, '#dfdfdf');
+        c.fillStyle = l; c.beginPath();
+        c.arc(5, y * rd + 5, 5, 0, 2 * Math.PI, false); c.fill();
+
+        l = c.createRadialGradient(x * rd + 5, y * rd + 5, 0, x * rd + 10, y * rd + 10, 5);
+        l.addColorStop(0, '#aeaeae'); l.addColorStop(1, '#dfdfdf');
+        c.fillStyle = l; c.beginPath();
+        c.arc(x * rd + 5, y * rd + 5, 5, 0, (Math.PI * 2), false); c.fill();
+
+        l = c.createLinearGradient(0, 0, 5, 0);
+        l.addColorStop(0, '#dfdfdf'); l.addColorStop(1, '#8e8e8e'); c.fillStyle = l;
+        c.fillRect(0, 5, 5, y * rd);
+
+        l = c.createLinearGradient(0, 0, 0, 5);
+        l.addColorStop(0, '#dfdfdf'); l.addColorStop(1, '#8e8e8e'); c.fillStyle = l;
+        c.fillRect(5, 0, x * rd, 5);
+
+        l = c.createLinearGradient(0, y * rd + 5, 0, y * rd + 10);
+        l.addColorStop(0, '#8e8e8e'); l.addColorStop(1, '#dfdfdf'); c.fillStyle = l;
+        c.fillRect(5, y * rd + 5, x * rd, 5);
+
+        l = c.createLinearGradient(x * rd + 5, 0, x * rd + 10, 0);
+        l.addColorStop(0, '#8e8e8e'); l.addColorStop(1, '#dfdfdf'); c.fillStyle = l;
+        c.fillRect(x * rd + 5, 5, 5, y * rd);
+    }
+}
+
+function run() {
+    a = new m('mines');
+    a.begin();
+
+    $('#restart').click(function(e) { e.preventDefault(); a.reset(); });
+    $('#diff-set a').click(function(e) { e.preventDefault(); a.setDifficulty(this.id); });
+    $('#mines').bind('contextmenu rightclick click', function(e) { e.preventDefault(); a.clickSquare(e); return false; });
+}
+
+$(document).ready(function() {
+    window.setTimeout("run()", 1000);
+});
+
+    </script>
+</body>
+</html>

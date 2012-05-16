@@ -4,7 +4,7 @@
     <title>Minesweeper</title>
     <link rel="stylesheet" href="http://blog.cerealboy.com/i/css/bootstrap-min.css">
     <style>
-canvas { }
+canvas { padding: 0px; }
 #img-cont { display: none; }
     </style>
 </head>
@@ -46,29 +46,34 @@ canvas { }
     </div>
 </div>
 <div id="img-cont">
-    <img id="img-begin" src="mine_closed.png">
-    <img id="img-0" src="mine_empty.png">
-    <img id="img-1" src="mine_one.gif">
-    <img id="img-2" src="mine_two.gif">
-    <img id="img-3" src="mine_three.gif">
-    <img id="img-4" src="mine_four.gif">
-    <img id="img-5" src="mine_five.gif">
-    <img id="img-6" src="mine_six.gif">
-    <img id="img-7" src="mine_seven.gif">
-    <img id="img-8" src="mine_eight.gif">
-    <img id="img-bomb" src="mine_mine.gif">
-    <img id="img-flag" src="mine_flag.gif">
-    <img id="img-tick" src="mine_tick.gif">
+    <img id="img-begin" src="img/mine_closed.png">
+    <img id="img-0" src="img/mine_empty.png">
+    <img id="img-1" src="img/mine_one.gif">
+    <img id="img-2" src="img/mine_two.gif">
+    <img id="img-3" src="img/mine_three.gif">
+    <img id="img-4" src="img/mine_four.gif">
+    <img id="img-5" src="img/mine_five.gif">
+    <img id="img-6" src="img/mine_six.gif">
+    <img id="img-7" src="img/mine_seven.gif">
+    <img id="img-8" src="img/mine_eight.gif">
+    <img id="img-bomb" src="img/mine_mine.gif">
+    <img id="img-flag" src="img/mine_flag.gif">
+    <img id="img-tick" src="img/mine_tick.gif">
 </div>
 
     <script type="text/javascript" src="http://blog.cerealboy.com/i/js/jquery-1.7.1.min.js"></script>
-    <script type="text/javascript" src="http://blog.cerealboy.com/i/js/bootstrap-alert.js"></script>
     <script type="text/javascript" src="http://blog.cerealboy.com/i/js/bootstrap-dropdown.js"></script>
-    <script type="text/javascript" src="http://blog.cerealboy.com/i/js/bootstrap-modal.js"></script>
     <script>
 
-var a;
 
+/**
+ * Minesweeper
+ *
+ * @author CerealBoy (Allan Shone) http://blog.cerealboy.com/
+ * @date 12th May, 2012
+ * @package com.cerealboy.minesweeper
+ */
+var a;
 function m(eyed) {
     var id = eyed;
     var difficulty = 0;

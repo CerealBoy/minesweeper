@@ -14,8 +14,11 @@ todo
 ====
 
 * Show details upon successful completion of field
+* Handle gestures and interactions with touch devices
 * Keep track of local high scores
+  * Cookie based with table display
 * Allow for open-ended configuration of field
+  * Specify width, height, mine-count
 
 changelog
 =========
